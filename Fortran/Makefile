@@ -20,4 +20,4 @@ new: lif2d-classic-new
 
 clean:
 		rm -f *.o *.mod *.MOD
-		rm -f *~ $(PROGRAMS) *minusp00
+		rm -f *~ $(PROGRAMS) *dat*

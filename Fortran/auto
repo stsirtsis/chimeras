@@ -1,0 +1,7 @@
+#!/bin/bash
+# Automate execution
+
+make new
+./lif2d-classic-new
+python plot.py
+make clean
