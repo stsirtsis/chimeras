@@ -1,41 +1,39 @@
 program lif2d
-	real*8 ro, t, tnext, sumCoeff
+	real*8 ro, t, sumCoeff
 	integer*4 seed, R, totalIter, secIter, writeIter, debugCounter, testCounter
 	character (len=40) :: filename
 
 !-------FIXES-------!
 !opening and closing files at writing
+!Euler step
 
 !-------Parameter Declarations-------!
 !uth: Potential threshold
-!mi: Integrator floor (mi in paper)
-!sigma: Coupling strength (sigma in paper)
+!mi: Integrator floor
+!sigma: Coupling strength
 !secIter: Iterations per sec
 !N: Grid dimension
 !totalIter: Total iterations
 !writeIter: Iterations per writing
 !refracIter: Steps at refractory period
-!R: R
+!R: Square radius
 
 	parameter (mi=1.0,pi=3.14159)
-	parameter (dt=0.01,secIter=1.0/dt)
+	parameter (dt=0.001,secIter=1.0/dt)
 	parameter (uth=0.980)
-	parameter (N=100,totalIter=50000)	!int(secIter*N*N)?
-	parameter (R=10)      						!size of classic connectivity    
+	parameter (N=100,totalIter=4000000)	!int(secIter*N*N)?
+	parameter (R=10)      						!size of classic connectivity
 	parameter (sigma=0.1)
 	parameter (refracIter=0,writeIter=100*secIter)
 
 !-------Array Declarations-------!
 !u: Potential at time t
 !unext: Potential at time t+dt
-!f: Sum of differences from neighbors' potential at time t
-!fnext: Sum of differences from neighbors' potential at time t+dt
-!neigh: Adjacency matrix
-!nk: Number of resets to resting potential	
-!itc: Current iterations already in refractory period
+!nk: Number of resets to resting potential
+!currRefracIter: Current iterations already in refractory period
 
-	dimension unext(N,N),u(N,N),f(N,N),fnext(N,N),itc(N,N)
-	dimension nk(N,N),neigh(N,N)
+	dimension unext(N,N),u(N,N),currRefracIter(N,N)
+	dimension nk(N,N)
 
 !-------Files-------!
 	open(unit=99,file='profile0.7-classic2D.dat3R30-minusp00')
@@ -53,44 +51,48 @@ program lif2d
 	do i=1,N
 		do j=1,N
 			u(i,j)=rand()
+			do while (u(i,j).ge.uth)
+				u(i,j)=rand()
+			enddo
+			u(i,j)=rand()
 		enddo
 	enddo
-	t=0.0
+
 	do i=1,N
 		do j=1,N
 			nk(i,j)=0
-			itc(i,j)=0
+			currRefracIter(i,j)=0
 		enddo
 	enddo
 
 	sumCoeff=sigma/dble((2*R+1)*(2*R+1)-1) 					!Potential sum coefficient
-	tnext=0.0
+	t=0.0
 
 !-------Time Integration-------!
 	do it=1, totalIter             !do on time
-		
+
 		write(*,*) 'Iteration ',it,'of ',totalIter		!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-		!-------DEBUGGING???-------!		
+		!-------DEBUGGING???-------!
 		if(mod(it,50000).eq.0) write(*,*) it,unext(2,3)
-		!------------------------------!		
-		
+		!------------------------------!
+
 		testCounter=0
 		do i=1,N                   !do on oscillators for refractory period
 			do j=1,N
-				
+
 				!-------Refractory-------!
-				if(unext(i,j).eq.0.0.and.itc(i,j).lt.refracIter) then
-					itc(i,j)=itc(i,j)+1
+				if(u(i,j).eq.0.0.and.currRefracIter(i,j).lt.refracIter) then
+					currRefracIter(i,j)=currRefracIter(i,j)+1
 					exit !go to 33
 				else
-					itc(i,j)=0
+					currRefracIter(i,j)=0
 				endif                     !end of refractory period
-				
+
 		                                  !oscillators
 
 				!-------Sum calculation-------!
-				sumVar=0.0	
+				sumVar=0.0
 				iLeftCorner=mod(N+i-R,N)
 				jLeftCorner=mod(N+j-R,N)
 
@@ -101,9 +103,9 @@ program lif2d
 						sumVar=sumVar+u(mod(k,N),mod(l,N))-u(i,j)
 					enddo
 				enddo
-				
+
 				!write(*,*) debugCounter
-				!read(*,*)				
+				!read(*,*)
 
 				!-------Euler Method Step-------!
 				unext(i,j)=u(i,j)+dt*(mi-u(i,j)+sumCoeff*sumVar)
@@ -113,15 +115,15 @@ program lif2d
 					unext(i,j)=0.0
 					nk(i,j)=nk(i,j)+1
 				endif
-				
+
 				u(i,j)=unext(i,j)
-		      	
+
 			enddo                         !oscillators
 		enddo                         !oscillators
-		tnext=tnext+dt
-        
+		t=t+dt
+
 		!-------DEBUGGING-------!
-		if (mod(it,secIter).eq.0) then		
+		if (mod(it,secIter).eq.0) then
 			open (file='testing.dat',unit=90) !,position="append"
 			do i=1,N
 				do j=1,N
@@ -129,26 +131,26 @@ program lif2d
 					write(90,fmt="(f10.8,a)",advance="no") ww,','
 				enddo
 				write(90,*)
-			enddo						
+			enddo
 			close(90)
 		endif
-   
-		!-------RESULTS???-------!		
+
+		!-------RESULTS???-------!
 		if(mod(it,secIter).eq.0) then
 			do il=1,N
-				write(96,*) il,tnext,unext(il,8)
+				write(96,*) il,t,unext(il,8)
 			enddo
-			write(96,*) 
+			write(96,*)
 		endif
 		if(mod(it,secIter).eq.0) then
-			write(97,*) tnext,unext(3,3),unext(1,5),unext(2,8),unext(3,1),unext(4,4)
+			write(97,*) t,unext(3,3),unext(1,5),unext(2,8),unext(3,1),unext(4,4)
 		endif
         !------------------------------!
 
-		!-------Write potentials to file-------!   
+		!-------Write potentials to file-------!
 		if(mod(it,(writeIter)).eq.0) then
 			iit=dble(it)/dble(writeIter)
-			write(filename, '("lif-spt-class-dat3R30-",I0,".001")')  iit 
+			write(filename, '("lif-spt-class-dat3R30-",I0,".001")')  iit
 			open (file=filename,unit=90)
 			do il=1,N
 				do jl=1,N
@@ -161,8 +163,8 @@ program lif2d
 		!-------Write mean phase velocities to file-------!
 		if(mod(it,(writeIter)).eq.0) then
 			iit=dble(it)/dble(writeIter)
-			write(filename, '("wmegaa0.7-class-dat3R30-",I0,".001")')  iit 
-			open (file=filename,unit=90)          
+			write(filename, '("wmegaa0.7-class-dat3R30-",I0,".001")')  iit
+			open (file=filename,unit=90)
 			do il=1,N
 				do jl=1,N
 					ww=2.0*pi*dble(nk(il,jl))/(dt*dble(it-writeIter))
@@ -171,7 +173,7 @@ program lif2d
 			enddo
 			close(90)
 		endif
-        
+
 	enddo                !time
 
 	stop
