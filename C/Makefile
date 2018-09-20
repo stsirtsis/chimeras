@@ -1,16 +1,16 @@
 CC = gcc
-CFLAGS = -O2
+CFLAGS = -O2 -Wall -Wextra
 #FCFLAGS += -I/usr/include
-PROGRAMS = BLif2DarisSigma_0.2 BLif2DarisSigma_0.2_new
+PROGRAMS = BLif2DarisSigma_0.2 LIF_2D_Classic
 
 all: $(PROGRAMS)
 
 old: BLif2DarisSigma_0.2
 
-new: BLif2DarisSigma_0.2_new
+new: LIF_2D_Classic
 
 %: %.o
-		$(CC) $(CFLAGS) -o $@ $^ 
+		$(CC) $(CFLAGS) -o $@ $^
 
 %.o: %.c
 		$(CC) $(CFLAGS) -c $<

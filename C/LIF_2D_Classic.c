@@ -10,11 +10,12 @@ double myrand(){
 int main(){
 
   FILE *file1;
-  FILE *file2;
-  FILE *Lif_2_chim2_2D=fopen("BLif_2_2D_sigma_0.1.dat","w");
-  FILE *Lif_2_2D= fopen("BLif2-u[l][t]_2D_sigma_0.1.dat","w");//Gia dhmiourgia arxeiou gia diagramma enos u[i] ws pros xrono.
-  FILE *Lif_2_chim_tomh=fopen("BLif_2_chim_tomh_sigma_0.1.dat","w");
+  file1=fopen("Potential.dat","w");
+  fprintf(file1, "u[x][y]\n");
+  fclose(file1);
 
+  FILE *file2;
+  char filename[60];
   double pi=3.14159265359 ;
   //int seed=823093819;   //seed1
   // int seed= 395849566; //seed2 πλέγμα χιμαιρών
@@ -35,7 +36,6 @@ int main(){
   double sigma=0.2; //Coupling strength
   double sumCoeff=sigma/((2.0*R+1.0)*(2.0*R+1.0)-1.0);  //Potential sum coefficient
   double mi=1.0; //Integrator floor
-  double t=0.0;
 
   double refracTime;  //Refractory period time
   int maxRefracIter=500; //Refractory period iterations
@@ -57,9 +57,10 @@ int main(){
   double currRefracIter[N][N];  //Current iterations already in refractory period
   int currThresCrossings[N][N];
   int currMPVIter=0;
-  int maxMPVIter=30000;
-  int minMPVIter=2000000; //bhma meta to opoio me endiaferei na arxisw na upologizw thn syxnothta twn neurwnwn.
+  int maxMPVIter=500;
+  int minMPVIter=10;//2000000; //bhma meta to opoio me endiaferei na arxisw na upologizw thn syxnothta twn neurwnwn.
   double w;
+  double t=0.0;
   //arxikopoihsh tou pinaka dunamikwn, ekf , currRefracIter.
   for (i=0; i<N; i++){
     for (j=0; j<N; j++){
@@ -77,6 +78,7 @@ int main(){
 
   while (it<totalIter){
 
+    printf("Iteration %d of %d\n", currMPVIter, maxMPVIter);
     for (i=0; i<N; i++){
       for (j=0; j<N; j++){
 
@@ -106,59 +108,41 @@ int main(){
           }
         }
 
-        if (it>=minMPVIter){
-          if (currMPVIter==maxMPVIter){
-            w=2.0*pi*currThresCrossings[i][j]/(maxMPVIter*dt);
-            currThresCrossings[i][j]=0;
-            currMPVIter=0;
-            if (i==0 && j==0){
-              char filename[30];
-              sprintf (filename, "BLif_2D_sigma%lf_pote%d.dat",sigma, deikths);
-              file1=fopen(filename ,"w");
-
-              char filefreq[30];
-              sprintf (filefreq, "BLif_2D_sigma%lf_freq%d.dat",sigma, deikths);
-              file2=fopen(filefreq,"w");
-            }
-            fprintf(file1,"%d \t %d \t %lf \n",i,j,u[i][j]);
-            if (it>=minMPVIter){
-              fprintf(file2,"%d \t %d \t %lf \n",i,j,2*pi*);
-            }
-
-            if (i==N-1 && j==N-1){
-              fclose(file1);
-              if (k>=minMPVIter){
-                fclose(file2);
-              }
-            }
-          }
-          currMPVIter++;
-        }
-
-        if (j==1){
-          if(k%(10000)==0 && i<N-1 ){
-            fprintf(Lif_2_chim_tomh,"%d \t %lf \n",i,unext[i][j]);
-          }
-          else if (k%(10000)==0){
-            fprintf(Lif_2_chim_tomh,"%d \t %lf \n \n ",i,unext[i][j]);
-          }
-        }
-
         u[i][j]=unext[i][j];
       }//edw kleinei h for j.
     }//edw kleinei h for i.
 
-    fprintf(Lif_2_2D,"%lf \t %lf \n",t,unext[x][y]);
-    if (k%(maxMPVIter)==0){
-      deikths=deikths+1;
+    if (it>=minMPVIter){
+      if (currMPVIter==maxMPVIter){
+        for(i=0;i<N;i++){
+          for(j=0;j<N;j++){
+            w=2.0*pi*currThresCrossings[i][j]/(maxMPVIter*dt);
+            currThresCrossings[i][j]=0;
+            if (i==0 && j==0){
+              //snprintf (filename, "LIF_2D_Classic_sigma_time_%d.dat",it);
+              sprintf(filename, "LIF_2D_Classic_sigma.dat");
+              file2=fopen(filename,"w");
+            }
+            //fprintf(file2,"%d, %d, %lf\n",i,j,w);
+            fprintf(file2,"%lf,",w);
+            if(j==N-1) fprintf(file2,"\n");
+            if (i==N-1 && j==N-1){
+              fclose(file2);
+            }
+          }
+        }
+      }
+      if (currMPVIter==maxMPVIter) currMPVIter=0;
+      else currMPVIter++;
     }
+    t+=dt;
     it++;
-    t=t+dt;
-
-
+    printf("%lf\n", u[x][y]);
+    file1=fopen("Potential.dat","a");
+    fprintf(file1,"%lf\n",u[x][y]);
+    fclose(file1);
   } //edw kleinei h while.
 
   //printf(" ****** Telos!! ******\n");
-
   return(0);
 }
