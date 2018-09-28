@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -O2 -Wall -Wextra
 #FCFLAGS += -I/usr/include
-PROGRAMS = BLif2DarisSigma_0.2 LIF_2D_Classic
+PROGRAMS = BLif2DarisSigma_0.2 LIF_2D_Classic LIF_2D_Classic_Parallel
 
 all: $(PROGRAMS)
 
@@ -9,11 +9,16 @@ old: BLif2DarisSigma_0.2
 
 new: LIF_2D_Classic
 
-%: %.o
-		$(CC) $(CFLAGS) -o $@ $^
+par: LIF_2D_Classic_Parallel
 
-%.o: %.c
-		$(CC) $(CFLAGS) -c $<
+LIF_2D_Classic: LIF_2D_Classic.c
+		$(CC) $(CFLAGS) LIF_2D_Classic.c -o LIF_2D_Classic
+
+BLif2DarisSigma_0.2: BLif2DarisSigma_0.2.c
+		$(CC) $(CFLAGS) BLif2DarisSigma_0.2.c -o BLif2DarisSigma_0.2
+
+LIF_2D_Classic_Parallel: LIF_2D_Classic_Parallel.c
+		$(CC) $(CFLAGS) -fopenmp LIF_2D_Classic_Parallel.c -o LIF_2D_Classic_Parallel
 
 clean:
 		rm -f *.o *.mod *.MOD

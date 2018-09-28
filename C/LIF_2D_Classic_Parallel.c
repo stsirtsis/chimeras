@@ -96,6 +96,8 @@ int main(){
   while (it<totalIter){
 
     if (it%1000==0) printf("Iteration %d of %d\n", it, totalIter);
+    //#pragma omp parallel private(sumVar, iLeftCorner, jLeftCorner) shared(u,unext,currRefracIter)
+    #pragma omp parallel for collapse(2)
     for (i=0; i<N; i++){
       for (j=0; j<N; j++){
 
