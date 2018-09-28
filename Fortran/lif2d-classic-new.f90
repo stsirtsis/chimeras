@@ -1,52 +1,47 @@
 program lif2d
 	real*8 ro, t, sumCoeff
-	integer*4 seed, R, totalIter, secIter, writeIter, debugCounter, testCounter
-	character (len=40) :: filename
+	integer*4 seed, R, totalIter, secIter, writeIter, currMPVIter
+	character (len=80) :: filename
 
-!-------FIXES-------!
-!opening and closing files at writing
-!Euler step
+	!-------FIXES-------!
+	!opening and closing files at writing
+	!Euler step
 
-!-------Parameter Declarations-------!
-!uth: Potential threshold
-!mi: Integrator floor
-!sigma: Coupling strength
-!secIter: Iterations per sec
-!N: Grid dimension
-!totalIter: Total iterations
-!writeIter: Iterations per writing
-!refracIter: Steps at refractory period
-!R: Square radius
+	!-------Parameter Declarations-------!
+	!uth: Potential threshold
+	!mi: Integrator floor
+	!sigma: Coupling strength
+	!secIter: Iterations per sec
+	!N: Grid dimension
+	!totalIter: Total iterations
+	!writeIter: Iterations per writing
+	!maxRefracIter: Steps at refractory period
+	!R: Square radius
 
 	parameter (mi=1.0,pi=3.14159)
-	parameter (dt=0.001,secIter=1.0/dt)
-	parameter (uth=0.980)
+	parameter (dt=0.01,secIter=1.0/dt) !dt=0.001
+	parameter (uth=0.98)
 	parameter (N=100,totalIter=4000000)	!int(secIter*N*N)?
-	parameter (R=10)      						!size of classic connectivity
+	parameter (R=22)      						!size of classic connectivity
 	parameter (sigma=0.1)
-	parameter (refracIter=0,writeIter=100*secIter)
-
-!-------Array Declarations-------!
-!u: Potential at time t
-!unext: Potential at time t+dt
-!nk: Number of resets to resting potential
-!currRefracIter: Current iterations already in refractory period
+	parameter (maxRefracIter=0,writeIter=100*secIter)
+	parameter (maxMPVIter=20000, minMPVIter=50000)
+	!-------Array Declarations-------!
+	!u: Potential at time t
+	!unext: Potential at time t+dt
+	!currThresCrossings: Number of resets to resting potential
+	!currRefracIter: Current iterations already in refractory period
 
 	dimension unext(N,N),u(N,N),currRefracIter(N,N)
-	dimension nk(N,N)
+	dimension currThresCrossings(N,N)
 
-!-------Files-------!
-	open(unit=99,file='profile0.7-classic2D.dat3R30-minusp00')
-	open(unit=98,file='wmegaa0.7-classic2D.dat3R30-minusp00')
-	open(unit=97,file='liandf0.7-one-classic2DR30.dat3-minusp00')
-	open(unit=96,file='liandf0.7-spt-classic2DR30.dat3-minusp00')
 
-!-------Initialization-------!
-!	seed=89732753      !seed1
-!	seed=239354385     !seed2
+	!-------Initialization-------!
+	!	seed=89732753      !seed1
+	!	seed=239354385     !seed2
 	seed=765385665     !seed3
-!	seed=930574656     !seed4
-!	seed=573028468     !seed5
+	!	seed=930574656     !seed4
+	!	seed=573028468     !seed5
 	ro=rand(seed)
 	do i=1,N
 		do j=1,N
@@ -60,52 +55,47 @@ program lif2d
 
 	do i=1,N
 		do j=1,N
-			nk(i,j)=0
+			currThresCrossings(i,j)=0
 			currRefracIter(i,j)=0
 		enddo
 	enddo
 
+	currMPVIter=0
 	sumCoeff=sigma/dble((2*R+1)*(2*R+1)-1) 					!Potential sum coefficient
 	t=0.0
 
-!-------Time Integration-------!
+	!-------Time Integration-------!
 	do it=1, totalIter             !do on time
 
-		write(*,*) 'Iteration ',it,'of ',totalIter		!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		if (mod(it,1000).eq.0) then
+			write(*,*) 'Iteration ',it,'of ',totalIter
+		endif
 
-		!-------DEBUGGING???-------!
-		if(mod(it,50000).eq.0) write(*,*) it,unext(2,3)
-		!------------------------------!
-
-		testCounter=0
 		do i=1,N                   !do on oscillators for refractory period
 			do j=1,N
 
 				!-------Refractory-------!
-				if(u(i,j).eq.0.0.and.currRefracIter(i,j).lt.refracIter) then
+				if(u(i,j).eq.0.0.and.currRefracIter(i,j).lt.maxRefracIter) then
 					currRefracIter(i,j)=currRefracIter(i,j)+1
-					exit !go to 33
+					cycle
 				else
 					currRefracIter(i,j)=0
 				endif                     !end of refractory period
 
-		                                  !oscillators
+				!oscillators
 
 				!-------Sum calculation-------!
 				sumVar=0.0
+				iLeftCorner=N+i-R
+				jLeftCorner=N+j-R
 				iLeftCorner=mod(N+i-R,N)
 				jLeftCorner=mod(N+j-R,N)
 
-				!debugCounter=0
 				do k=iLeftCorner,iLeftCorner+2*R
 					do l=jLeftCorner, jLeftCorner+2*R
-						debugCounter=debugCounter+1
-						sumVar=sumVar+u(mod(k,N),mod(l,N))-u(i,j)
+						sumVar=sumVar+u(i,j)-u(mod(k,N),mod(l,N))
 					enddo
 				enddo
-
-				!write(*,*) debugCounter
-				!read(*,*)
 
 				!-------Euler Method Step-------!
 				unext(i,j)=u(i,j)+dt*(mi-u(i,j)+sumCoeff*sumVar)
@@ -113,68 +103,47 @@ program lif2d
 				!-------Potential threshold is crossed-------!
 				if(unext(i,j).gt.uth) then
 					unext(i,j)=0.0
-					nk(i,j)=nk(i,j)+1
+					currThresCrossings(i,j)=currThresCrossings(i,j)+1
 				endif
 
 				u(i,j)=unext(i,j)
 
 			enddo                         !oscillators
 		enddo                         !oscillators
-		t=t+dt
 
-		!-------DEBUGGING-------!
-		if (mod(it,secIter).eq.0) then
-			open (file='testing.dat',unit=90) !,position="append"
+
+		if (it.ge.minMPVIter) then
+			if (currMPVIter.eq.maxMPVIter) then
+				write(filename, '("Results_MPV_LIF_2D_Classic_sigma_",f2.1,"_R_",I2,"_time_",f10.5,"_.dat")')  sigma, R, t
+				open(file=filename, unit=90)
+				do i=1,N
+					do j=1,N
+						ww=2.0*pi*dble(currThresCrossings(i,j))/(dt*(it-minMPVIter))
+						write(90,fmt="(f10.8,a)",advance="no") ww,','
+					enddo
+					write(90,*)
+				enddo
+				close(90)
+				currMPVIter=0
+			else
+				currMPVIter=currMPVIter+1
+			endif
+		endif
+
+		if(mod(it,1000).eq.0) then
+			write(filename, '("Results_POT_LIF_2D_Classic_sigma_",F8.8,"_R_",I2,"_time_",F8.8,"_.dat")')  sigma, R, t
+			open(file=filename, unit=90)
 			do i=1,N
 				do j=1,N
-					ww=2.0*pi*dble(nk(i,j))/(dt*dble(it))
-					write(90,fmt="(f10.8,a)",advance="no") ww,','
+					write(90,fmt="(f10.8,a)",advance="no") u(i,j),','
 				enddo
 				write(90,*)
 			enddo
 			close(90)
 		endif
 
-		!-------RESULTS???-------!
-		if(mod(it,secIter).eq.0) then
-			do il=1,N
-				write(96,*) il,t,unext(il,8)
-			enddo
-			write(96,*)
-		endif
-		if(mod(it,secIter).eq.0) then
-			write(97,*) t,unext(3,3),unext(1,5),unext(2,8),unext(3,1),unext(4,4)
-		endif
-        !------------------------------!
-
-		!-------Write potentials to file-------!
-		if(mod(it,(writeIter)).eq.0) then
-			iit=dble(it)/dble(writeIter)
-			write(filename, '("lif-spt-class-dat3R30-",I0,".001")')  iit
-			open (file=filename,unit=90)
-			do il=1,N
-				do jl=1,N
-					write(90,*) il,jl,u(il,jl)
-				enddo
-			enddo
-			close(90)
-		endif
-
-		!-------Write mean phase velocities to file-------!
-		if(mod(it,(writeIter)).eq.0) then
-			iit=dble(it)/dble(writeIter)
-			write(filename, '("wmegaa0.7-class-dat3R30-",I0,".001")')  iit
-			open (file=filename,unit=90)
-			do il=1,N
-				do jl=1,N
-					ww=2.0*pi*dble(nk(il,jl))/(dt*dble(it-writeIter))
-					write(90,*) il,jl,ww
-				enddo
-			enddo
-			close(90)
-		endif
-
-	enddo                !time
+		t=t+dt
+	enddo
 
 	stop
 

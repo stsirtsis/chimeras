@@ -4,27 +4,20 @@
 #include <string.h>
 
 const char* getfield(char* line, int num){
-    const char* tok;
-    for (tok = strtok(line, ",");
-            tok && *tok;
-            tok = strtok(NULL, ",\n"))
-    {
-        if (!--num)
-            return tok;
-    }
-    return NULL;
-}
-
-//Returns a real number in the interval [0,1]
-double myrand(){
-  return((double)rand()/(double)RAND_MAX);
+  const char* tok;
+  for (tok = strtok(line, ",");
+  tok && *tok;
+  tok = strtok(NULL, ",\n"))
+  {
+    if (!--num)
+    return tok;
+  }
+  return NULL;
 }
 
 int main(){
 
   FILE *file1;
-  FILE *file2;
-  FILE *file3;
   char filename[80];
   double pi=3.14159265359 ;
   int seed=823093819;   //seed1
@@ -42,17 +35,18 @@ int main(){
   int totalTime=10000;  //Simulation time
   int it=0;
   int totalIter=totalTime/dt; //Total iterations
-  int R=10; //Square radius
-  double sigma=0.1; //Coupling strength
+  int R=22; //Square radius
+  double sigma=0.7; //Coupling strength
   double sumCoeff=sigma/((2.0*R+1.0)*(2.0*R+1.0)-1.0);  //Potential sum coefficient
   double mi=1.0; //Integrator floor
+  double uth=0.98;
 
-  double refracTime=0;  //Refractory period time
+  double Ts=log(mi/(mi-uth));
+  double refracTime=0.22*Ts;  //Refractory period time
   int maxRefracIter=round(refracTime/dt); //Refractory period iterations
   int i,j,k,l;
   int iLeftCorner, jLeftCorner;
 
-  double uth=0.98;
   double u[N][N];
   double unext[N][N];
 
@@ -60,28 +54,23 @@ int main(){
 
   double currRefracIter[N][N];  //Current iterations already in refractory period
   int currThresCrossings[N][N];
-  int currMPVIter=0;
   int maxMPVIter=20000;
   int minMPVIter=50000; //bhma meta to opoio me endiaferei na arxisw na upologizw thn syxnothta twn neurwnwn.
   double w;
   double t=0.0;
-  //arxikopoihsh tou pinaka dunamikwn, ekf , currRefracIter.
 
   for (i=0; i<N; i++){
     for (j=0; j<N; j++){
       unext[i][j]=0.0;
       currRefracIter[i][j]=0.0;
       currThresCrossings[i][j]=0;
-      // do{
-      //   u[i][j]=myrand();
-      // }while(u[i][j]>=uth);
     }
   }
 
-  file3=fopen("initials.csv","r");
+  file1=fopen("initial.csv","r");
   char line[2048];
   i=0;
-  while(fgets(line, 2048, file3)){
+  while(fgets(line, 2048, file1)){
     for(j=1;j<=N;j++){
       char* tmp = strdup(line);
       u[i][j-1]=atof(getfield(tmp,j));
@@ -90,7 +79,7 @@ int main(){
     }
     i++;
   }
-  fclose(file3);
+  fclose(file1);
 
   /*******Simulation*******/
   while (it<totalIter){
@@ -117,7 +106,7 @@ int main(){
             sumVar+=(u[i][j]-u[k%N][l%N]);
           }
         }
-        //printf("Sum %lf\n", sumVar);
+
         unext[i][j]=u[i][j]+dt*(mi-u[i][j]+sumCoeff*sumVar);
 
         if(unext[i][j]>=uth){   //Threshold crossed
@@ -132,55 +121,34 @@ int main(){
     }//edw kleinei h for i.
 
     if (it>=minMPVIter){
-      if (currMPVIter==maxMPVIter-1){
+      if ((it-minMPVIter)%maxMPVIter==0){
+        sprintf(filename, "Results_MPV_LIF_2D_Classic_sigma_%lf_R_%d_time_%lf_.dat",sigma,R,t);
+        file1=fopen(filename,"w");
         for(i=0;i<N;i++){
           for(j=0;j<N;j++){
-            //w=currThresCrossings[i][j];
             w=2.0*pi*currThresCrossings[i][j]/((it-minMPVIter)*dt);
-            currThresCrossings[i][j]=0;
-            if (i==0 && j==0){
-              sprintf(filename, "Results_POT_LIF_2D_Classic_sigma_%lf_R_%d_time_%lf_.dat",sigma,R,t);
-              file1=fopen(filename,"w");
-              sprintf(filename, "Results_MPV_LIF_2D_Classic_sigma_%lf_R_%d_time_%lf_.dat",sigma,R,t);
-              file2=fopen(filename,"w");
-            }
-            fprintf(file1, "%lf,",u[i][j]);
-            fprintf(file2,"%lf,",w);
-            if(j==N-1){
-              fprintf(file1,"\n");
-              fprintf(file2,"\n");
-            }
-            if (i==N-1 && j==N-1){
-              fclose(file1);
-              fclose(file2);
-            }
+            //currThresCrossings[i][j]=0;
+            fprintf(file1,"%lf,",w);
           }
+          fprintf(file1,"\n");
         }
-        currMPVIter=0;
+        fclose(file1);
       }
-      else currMPVIter++;
     }
     if(it%1000==0){
+      sprintf(filename, "Results_POT_LIF_2D_Classic_sigma_%lf_R_%d_time_%lf_.dat",sigma,R,t);
+      file1=fopen(filename,"w");
       for(i=0;i<N;i++){
         for(j=0;j<N;j++){
-          if (i==0 && j==0){
-            sprintf(filename, "Results_POT_LIF_2D_Classic_sigma_%lf_R_%d_time_%lf_.dat",sigma,R,t);
-            file1=fopen(filename,"w");
-          }
           fprintf(file1, "%lf,",u[i][j]);
-          if(j==N-1){
-            fprintf(file1,"\n");
-          }
-          if (i==N-1 && j==N-1){
-            fclose(file1);
-          }
         }
+        fprintf(file1,"\n");
       }
+      fclose(file1);
     }
     t+=dt;
     it++;
   } //edw kleinei h while.
 
-  //printf(" ****** Telos!! ******\n");
   return(0);
 }
