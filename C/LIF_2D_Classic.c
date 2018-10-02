@@ -20,18 +20,10 @@ int main(){
   FILE *file1;
   char filename[80];
   double pi=3.14159265359 ;
-  int seed=823093819;   //seed1
-  //int seed= 395849566; //seed2 πλέγμα χιμαιρών
-  //int seed= 95679999;
-  // int seed= 65243455;
-  // int seed= 97243562;
-  // int seed= 943746563;
-
-  srand(seed);
 
   /*******Parameter Declarations*******/
   int N=100;  //Grid dimension
-  double dt=0.01; //0.001
+  double dt=0.001; //0.001
   int totalTime=10000;  //Simulation time
   int it=0;
   int totalIter=totalTime/dt; //Total iterations
@@ -55,7 +47,7 @@ int main(){
   double currRefracIter[N][N];  //Current iterations already in refractory period
   int currThresCrossings[N][N];
   int maxMPVIter=20000;
-  int minMPVIter=50000; //bhma meta to opoio me endiaferei na arxisw na upologizw thn syxnothta twn neurwnwn.
+  int minMPVIter=100000; //bhma meta to opoio me endiaferei na arxisw na upologizw thn syxnothta twn neurwnwn.
   double w;
   double t=0.0;
 
@@ -74,7 +66,6 @@ int main(){
     for(j=1;j<=N;j++){
       char* tmp = strdup(line);
       u[i][j-1]=atof(getfield(tmp,j));
-      //printf("Field %d,%d is %s\n", i, j-1, getfield(tmp,j));
       free(tmp);
     }
     i++;
@@ -120,7 +111,7 @@ int main(){
       }//edw kleinei h for j.
     }//edw kleinei h for i.
 
-    if (it>=minMPVIter){
+    if (it>minMPVIter){
       if ((it-minMPVIter)%maxMPVIter==0){
         sprintf(filename, "Results_MPV_LIF_2D_Classic_sigma_%lf_R_%d_time_%lf_.dat",sigma,R,t);
         file1=fopen(filename,"w");

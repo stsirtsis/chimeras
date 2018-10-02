@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
+#include <time.h>
 
 //Returns a real number in the interval [0,1]
 double myrand(){
@@ -15,6 +16,9 @@ int main() {
   double uth=0.98;
   int i,j;
   double tmp;
+
+int seed = time(NULL);
+  srand(seed);
 
   file1=fopen("initial.csv","w");
   for(i=0;i<N;i++){

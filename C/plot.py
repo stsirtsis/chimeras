@@ -7,6 +7,7 @@ from matplotlib.colors import BoundaryNorm
 from matplotlib.ticker import MaxNLocator
 import numpy as np
 from pylab import savefig
+from pathlib import Path
 
 resFiles=list(sys.argv)[1:]
 #print resFiles
@@ -22,41 +23,46 @@ for f in resFiles:
 
     z = np.zeros((100,100))
     timeVar=f.split("_")[10]
-    with open(f, 'rb') as csvfile:
-        spamreader=csv.reader(csvfile, delimiter=',', quotechar='|')
-        i=0
-        for row in spamreader:
-            j=0
-            for num in row:
-                if (num != ""):
-                    #print i,j
-                    z[i,j]=float(num)
-                    j=j+1
-            i=i+1
-
-    # x and y are bounds, so z should be the value *inside* those bounds.
-    # Therefore, remove the last value from the z array.
-    z = z[:-1, :-1]
-    levels = MaxNLocator(nbins=256).tick_values(z.min(), z.max())
-
-
-    # pick the desired colormap, sensible levels, and define a normalization
-    # instance which takes data values and translates those into levels.
-    cmap = plt.get_cmap('inferno')
-
-    fig = plt.plot()
-
-    # contours are *point* based plots, so convert our bound into point
-    # centers
-    cf = plt.contourf(x[:-1, :-1] + dx/2.,
-                      y[:-1, :-1] + dy/2., z, levels=levels,
-                      cmap=cmap)
-
-    plt.colorbar(cf)
     if (f.split("_")[1]=="MPV"):
-        plt.title('Mean phase velocity at time '+timeVar+'.')
-        savefig('Plots/mean_phase_velocity_'+timeVar+'.png')
+        myimg=Path("Plots/mean_phase_velocity_"+timeVar+".png")
     elif (f.split("_")[1]=="POT"):
-        plt.title('Potential at time '+timeVar+'.')
-        savefig('Plots/potential_'+timeVar+'.png')
-    plt.clf()
+        myimg=Path("Plots/potential_"+timeVar+".png")
+    if not myimg.is_file():
+        with open(f, 'rb') as csvfile:
+            spamreader=csv.reader(csvfile, delimiter=',', quotechar='|')
+            i=0
+            for row in spamreader:
+                j=0
+                for num in row:
+                    if (num != ""):
+                        #print i,j
+                        z[i,j]=float(num)
+                        j=j+1
+                i=i+1
+
+        # x and y are bounds, so z should be the value *inside* those bounds.
+        # Therefore, remove the last value from the z array.
+        z = z[:-1, :-1]
+        levels = MaxNLocator(nbins=256).tick_values(z.min(), z.max())
+
+
+        # pick the desired colormap, sensible levels, and define a normalization
+        # instance which takes data values and translates those into levels.
+        cmap = plt.get_cmap('jet')
+
+        fig = plt.plot()
+
+        # contours are *point* based plots, so convert our bound into point
+        # centers
+        cf = plt.contourf(x[:-1, :-1] + dx/2.,
+                          y[:-1, :-1] + dy/2., z, levels=levels,
+                          cmap=cmap)
+
+        plt.colorbar(cf)
+        if (f.split("_")[1]=="MPV"):
+            plt.title('Mean phase velocity at time '+timeVar+'.')
+            savefig('Plots/mean_phase_velocity_'+timeVar+'.png')
+        elif (f.split("_")[1]=="POT"):
+            plt.title('Potential at time '+timeVar+'.')
+            savefig('Plots/potential_'+timeVar+'.png')
+        plt.clf()
