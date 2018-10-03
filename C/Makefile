@@ -20,7 +20,7 @@ BLif2DarisSigma_0.2: BLif2DarisSigma_0.2.c
 		$(CC) $(CFLAGS) BLif2DarisSigma_0.2.c -o BLif2DarisSigma_0.2
 
 LIF_2D_Classic_Parallel: LIF_2D_Classic_Parallel.c
-		$(CC) $(CFLAGS) LIF_2D_Classic_Parallel.c -o LIF_2D_Classic_Parallel
+		$(CC) $(CFLAGS) LIF_2D_Classic_Parallel.c -pthread -o LIF_2D_Classic_Parallel
 
 Generator: Generator.c
 		$(CC) $(CFLAGS) Generator.c -o Generator
