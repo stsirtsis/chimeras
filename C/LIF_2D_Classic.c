@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 const char* getfield(char* line, int num){
   const char* tok;
@@ -15,7 +16,7 @@ const char* getfield(char* line, int num){
   return NULL;
 }
 
-int main(){
+int main(int argc, char** argv){
 
   FILE *file1;
   char filename[80];
@@ -29,13 +30,13 @@ int main(){
   int totalIter=totalTime/dt; //Total iterations
   int R=22; //Square radius
   double sigma=0.7; //Coupling strength
-  double sumCoeff=sigma/((2.0*R+1.0)*(2.0*R+1.0)-1.0);  //Potential sum coefficient
+  double sumCoeff=sigma/((2*R+1)*(2*R+1)-1);  //Potential sum coefficient
   double mi=1.0; //Integrator floor
   double uth=0.98;
 
   double Ts=log(mi/(mi-uth));
   double refracTime=0.22*Ts;  //Refractory period time
-  int maxRefracIter=round(refracTime/dt); //Refractory period iterations
+  int maxRefracIter=ceil(refracTime/dt); //Refractory period iterations
   int i,j,k,l;
   int iLeftCorner, jLeftCorner;
 
@@ -44,22 +45,25 @@ int main(){
 
   double sumVar=0.0;  //Potential sum coefficient
 
-  double currRefracIter[N][N];  //Current iterations already in refractory period
-  int currThresCrossings[N][N];
-  int maxMPVIter=20000;
-  int minMPVIter=100000; //bhma meta to opoio me endiaferei na arxisw na upologizw thn syxnothta twn neurwnwn.
-  double w;
+  int currRefracIter[N][N];  //Current iterations already in refractory period
+  int maxMPVIter=30000;
+  int minMPVIter=2000000; //bhma meta to opoio me endiaferei na arxisw na upologizw thn syxnothta twn neurwnwn.
+
+  double currTime[N][N];
+  double lastTime[N][N];
+  double w[N][N];
   double t=0.0;
 
   for (i=0; i<N; i++){
     for (j=0; j<N; j++){
       unext[i][j]=0.0;
+      currTime[i][j]=0.0;
+      lastTime[i][j]=0.0;
       currRefracIter[i][j]=0.0;
-      currThresCrossings[i][j]=0;
     }
   }
 
-  file1=fopen("initial.csv","r");
+  file1=fopen(argv[1],"r"); //argv[1]
   char line[2048];
   i=0;
   while(fgets(line, 2048, file1)){
@@ -72,10 +76,11 @@ int main(){
   }
   fclose(file1);
 
+  time_t benchBegin = time(NULL);
   /*******Simulation*******/
   while (it<totalIter){
 
-    if (it%1000==0) printf("Iteration %d of %d\n", it, totalIter);
+    if (it%10000==0) printf("Iteration %d of %d\n", it, totalIter);
     for (i=0; i<N; i++){
       for (j=0; j<N; j++){
 
@@ -99,43 +104,54 @@ int main(){
         }
 
         unext[i][j]=u[i][j]+dt*(mi-u[i][j]+sumCoeff*sumVar);
+        currTime[i][j]+=dt;
 
         if(unext[i][j]>=uth){   //Threshold crossed
           unext[i][j]=0.0;
           if (it>=minMPVIter){
-            currThresCrossings[i][j]++;
+            w[i][j]=(w[i][j]*lastTime[i][j]+2*pi)/(lastTime[i][j]+currTime[i][j]+refracTime);
+            lastTime[i][j]+=(currTime[i][j]+refracTime);
           }
+          currTime[i][j]=0.0;
         }
-
-        u[i][j]=unext[i][j];
       }//edw kleinei h for j.
     }//edw kleinei h for i.
 
+    if(it%10000==0){
+      sprintf(filename, "Results%s/Results_POT_LIF_2D_Classic_sigma_%lf_R_%d_time_%lf_.dat",argv[2],sigma,R,t);
+      file1=fopen(filename,"w");
+      for(i=0;i<N;i++){
+        for(j=0;j<N;j++){
+          fprintf(file1, "%lf,",unext[i][j]);
+        }
+        fprintf(file1,"\n");
+      }
+      fclose(file1);
+    }
     if (it>minMPVIter){
       if ((it-minMPVIter)%maxMPVIter==0){
-        sprintf(filename, "Results_MPV_LIF_2D_Classic_sigma_%lf_R_%d_time_%lf_.dat",sigma,R,t);
+        sprintf(filename, "Results%s/Results_MPV_LIF_2D_Classic_sigma_%lf_R_%d_time_%lf_.dat",argv[2],sigma,R,t);
         file1=fopen(filename,"w");
         for(i=0;i<N;i++){
           for(j=0;j<N;j++){
-            w=2.0*pi*currThresCrossings[i][j]/((it-minMPVIter)*dt);
-            //currThresCrossings[i][j]=0;
-            fprintf(file1,"%lf,",w);
+            fprintf(file1,"%lf,",w[i][j]);
           }
           fprintf(file1,"\n");
         }
         fclose(file1);
       }
     }
-    if(it%1000==0){
-      sprintf(filename, "Results_POT_LIF_2D_Classic_sigma_%lf_R_%d_time_%lf_.dat",sigma,R,t);
+    if (it == 2000000){
+      time_t benchEnd = time(NULL);
+      sprintf(filename, "Results%s/execTime.dat",argv[2]);
       file1=fopen(filename,"w");
-      for(i=0;i<N;i++){
-        for(j=0;j<N;j++){
-          fprintf(file1, "%lf,",u[i][j]);
-        }
-        fprintf(file1,"\n");
-      }
+      fprintf(file1,"Execution time for 2000 time units: %ld seconds\n",benchEnd-benchBegin);
       fclose(file1);
+    }
+    for (i=0; i<N; i++){
+      for (j=0; j<N; j++){
+        u[i][j]=unext[i][j];
+      }
     }
     t+=dt;
     it++;

@@ -43,6 +43,7 @@ for f in resFiles:
         # x and y are bounds, so z should be the value *inside* those bounds.
         # Therefore, remove the last value from the z array.
         z = z[:-1, :-1]
+	#MaxNLocator.MAX_TICKS=1500
         levels = MaxNLocator(nbins=256).tick_values(z.min(), z.max())
 
 
@@ -58,7 +59,7 @@ for f in resFiles:
                           y[:-1, :-1] + dy/2., z, levels=levels,
                           cmap=cmap)
 
-        plt.colorbar(cf)
+        plt.colorbar(cf, format='%.3f', ticks=[np.amax(z), (np.amax(z)+np.amin(z))/2, np.amin(z)])
         if (f.split("_")[1]=="MPV"):
             plt.title('Mean phase velocity at time '+timeVar+'.')
             savefig('Plots/mean_phase_velocity_'+timeVar+'.png')

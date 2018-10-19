@@ -8,7 +8,7 @@ double myrand(){
   return((double)rand()/(double)RAND_MAX);
 }
 
-int main() {
+int main(int argc, char** argv) {
 
   FILE *file1;
 
@@ -20,7 +20,7 @@ int main() {
 int seed = time(NULL);
   srand(seed);
 
-  file1=fopen("initial.csv","w");
+  file1=fopen(argv[1],"w");
   for(i=0;i<N;i++){
     for(j=0;j<N;j++){
       do{

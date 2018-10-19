@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 const char* getfield(char* line, int num){
   const char* tok;
@@ -20,7 +21,7 @@ double myrand()
  return((double)rand()/(double)RAND_MAX);
 }
 
-int main()
+int main(int argc, char** argv)
 
 {
 //FILE *Lif_2_chim1_2D_0=fopen("Lif_2_chim1_2D_0.dat","w");
@@ -29,9 +30,13 @@ int main()
 //FILE *Lif_2_2D_freq=fopen("Lif_2_2D_freq.dat","w");
 FILE *file1;
 FILE *file2;
-FILE *Lif_2_chim2_2D=fopen("BLif_2_2D_sigma_0.1.dat","w");
-FILE *Lif_2_2D= fopen("BLif2-u[l][t]_2D_sigma_0.1.dat","w");//Gia dhmiourgia arxeiou gia diagramma enos u[i] ws pros xrono.
-FILE *Lif_2_chim_tomh=fopen("BLif_2_chim_tomh_sigma_0.1.dat","w");
+char filename[80];
+sprintf(filename, "ResultsOld%s/BLif_2_2D_sigma_0.1.dat",argv[2]);
+FILE *Lif_2_chim2_2D=fopen(filename,"w");
+sprintf(filename, "ResultsOld%s/BLif2-u[l][t]_2D_sigma_0.1.dat",argv[2]);
+FILE *Lif_2_2D= fopen(filename,"w");//Gia dhmiourgia arxeiou gia diagramma enos u[i] ws pros xrono.
+sprintf(filename, "ResultsOld%s/BLif_2_chim_tomh_sigma_0.1.dat",argv[2]);
+FILE *Lif_2_chim_tomh=fopen(filename,"w");
 //int seed=823093819;   //seed1
  double pi=3.14159265359 ;
  // int seed= 395849566; //seed2 πλέγμα χιμαιρών
@@ -71,7 +76,7 @@ double m=1.0; // sta8era m
 double t=0.0; // o xronos
 
 double tabs_arxiko ;
-int n=500;
+int n=100;
 //printf("Posa bhmata xronou 8a diarkei h efhsyxash;\n");
 //scanf("%d",&n);
 double Ts=log(m/(m-0.98));
@@ -202,7 +207,7 @@ for ( i=0; i<N ; i++)
    }
 //printf(" check 5 \n"); // Gia epi8eorhsh rohs .
 
-file1=fopen("initial.csv","r");
+file1=fopen(argv[1],"r");
 char line[2048];
 i=0;
 while(fgets(line, 2048, file1)){
@@ -221,9 +226,10 @@ int kfreq=2000000; //bhma meta to opoio me endiaferei na arxisw na upologizw thn
 //Edw 3ekina h roh tou xronou.
 
 
+time_t benchBegin = time(NULL);
 while (t<=TIME)
   {
-    if (k%1000==0) printf("Iteration %d of %d\n",k,(int)(TIME/dt));
+    if (k%10000==0) printf("Iteration %d of %d\n",k,(int)(TIME/dt));
   //  printf("\n 3ekinhse o xronos kai twra eimaste sto %lf",t);
   for ( i=0 ; i<N ; i++)
       {
@@ -276,7 +282,7 @@ while (t<=TIME)
 
          if(u[i][j]>=uth )
             {
-             w[i][j]=(w[i][j]*tfreq0[i][j]+1)/(tfreq0[i][j]+tfreq[i][j]+tabs_arxiko);
+             w[i][j]=(w[i][j]*tfreq0[i][j]+2*pi)/(tfreq0[i][j]+tfreq[i][j]+tabs_arxiko);
              if (k>=kfreq)
                {
                 tfreq0[i][j]=tfreq0[i][j]+tfreq[i][j]+tabs_arxiko ;
@@ -303,11 +309,10 @@ while (t<=TIME)
                  if (k>=kfreq)
                   {
                     char filefreq[80];
-                    sprintf (filefreq, "BLif_2D_sigma%lf_freq%d.dat" ,sigmaconst, deikths);
+                    sprintf (filefreq, "ResultsOld%s/BLif_2D_sigma%lf_freq%d.dat" ,argv[2],sigmaconst, deikths);
                     file2=fopen(filefreq,"w");
                   }
-                  char filename[80];
-                  sprintf (filename, "BLif_2D_sigma%lf_pote%d.dat",sigmaconst, deikths);
+                  sprintf (filename, "ResultsOld%s/BLif_2D_sigma%lf_pote%d.dat",argv[2],sigmaconst, deikths);
                   file1=fopen(filename ,"w");
 
                 }
@@ -361,7 +366,13 @@ while (t<=TIME)
 
       }//edw kleinei h for j.
      }//edw kleinei h for i.
-
+     if (k == 2000000){
+       time_t benchEnd = time(NULL);
+       sprintf(filename, "ResultsOld%s/execTime.dat",argv[2]);
+       file1=fopen(filename,"w");
+       fprintf(file1,"Execution time for 2000 time units: %ld seconds\n",benchEnd-benchBegin);
+       fclose(file1);
+     }
      fprintf(Lif_2_2D,"%lf \t %lf \n",t,u[x][y]);
            for ( ll=0 ;  ll<N ; ll++)
              {
