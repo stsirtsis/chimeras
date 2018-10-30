@@ -63,11 +63,11 @@ int tn=TIME/dt; //sunolika bhmata xronou
 //printf("8a ginoun %d bhmata xronou",tn);
 
 
-int a=22;
+int a=10;
 //printf(" H pleura tou tetragwnou al/shs einai 2*a+1 , poio 8a einai to a;\n a=");
 //scanf("%d",&a);
 
-double sigmaconst=0.7;
+double sigmaconst=0.1;
 //printf(" Poia 8a einai h sta8era suzeu3hs?\n sigmaconst=");
 //scanf("%lf",&sigmaconst);
 

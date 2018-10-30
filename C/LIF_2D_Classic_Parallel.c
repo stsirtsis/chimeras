@@ -7,9 +7,7 @@
 #include <unistd.h>
 #include <time.h>
 
-#ifndef NUMTHREADS
 #define NUMTHREADS 4
-#endif
 
 //const size_t NUMTHREADS = 4;
 int done = 0;

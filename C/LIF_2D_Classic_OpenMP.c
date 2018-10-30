@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <omp.h>
 
 const char* getfield(char* line, int num){
   const char* tok;
@@ -19,7 +20,7 @@ const char* getfield(char* line, int num){
 int main(int argc, char** argv){
 
   FILE *file1;
-  char filename[80];
+  char filename[100];
   double pi=3.14159265359 ;
 
   /*******Parameter Declarations*******/
@@ -81,44 +82,47 @@ int main(int argc, char** argv){
   while (it<totalIter){
 
     if (it%10000==0) printf("Iteration %d of %d\n", it, totalIter);
-    for (i=0; i<N; i++){
-      for (j=0; j<N; j++){
+    #pragma omp parallel num_threads(5)
+    {
+      #pragma omp for private(sumVar,iLeftCorner,jLeftCorner,k,l) schedule(dynamic) collapse(2)
+      for (i=0; i<N; i++){
+        for (j=0; j<N; j++){
 
-        /*******Refractory Period*******/
-        if (u[i][j]==0 && currRefracIter[i][j]<maxRefracIter){
-          currRefracIter[i][j]++;
-          continue;
-        }
-        else{
-          currRefracIter[i][j]=0;
-        }
-
-        /*******Sum Calculation*******/
-        sumVar=0.0;
-        iLeftCorner=N+i-R;
-        jLeftCorner=N+j-R;
-        for  (k=iLeftCorner; k<iLeftCorner+2*R+1; k++){
-          for (l=jLeftCorner; l<jLeftCorner+2*R+1; l++){
-            sumVar+=(u[i][j]-u[k%N][l%N]);
+          /*******Refractory Period*******/
+          if (u[i][j]==0 && currRefracIter[i][j]<maxRefracIter){
+            currRefracIter[i][j]++;
+            continue;
           }
-        }
-
-        unext[i][j]=u[i][j]+dt*(mi-u[i][j]+sumCoeff*sumVar);
-        currTime[i][j]+=dt;
-
-        if(unext[i][j]>=uth){   //Threshold crossed
-          unext[i][j]=0.0;
-          if (it>=minMPVIter){
-            w[i][j]=(w[i][j]*lastTime[i][j]+2*pi)/(lastTime[i][j]+currTime[i][j]+refracTime);
-            lastTime[i][j]+=(currTime[i][j]+refracTime);
+          else{
+            currRefracIter[i][j]=0;
           }
-          currTime[i][j]=0.0;
-        }
-      }//edw kleinei h for j.
-    }//edw kleinei h for i.
 
+          /*******Sum Calculation*******/
+          sumVar=0.0;
+          iLeftCorner=N+i-R;
+          jLeftCorner=N+j-R;
+          for  (k=iLeftCorner; k<iLeftCorner+2*R+1; k++){
+            for (l=jLeftCorner; l<jLeftCorner+2*R+1; l++){
+              sumVar+=(u[i][j]-u[k%N][l%N]);
+            }
+          }
+
+          unext[i][j]=u[i][j]+dt*(mi-u[i][j]+sumCoeff*sumVar);
+          currTime[i][j]+=dt;
+
+          if(unext[i][j]>=uth){   //Threshold crossed
+            unext[i][j]=0.0;
+            if (it>=minMPVIter){
+              w[i][j]=(w[i][j]*lastTime[i][j]+2*pi)/(lastTime[i][j]+currTime[i][j]+refracTime);
+              lastTime[i][j]+=(currTime[i][j]+refracTime);
+            }
+            currTime[i][j]=0.0;
+          }
+        }//edw kleinei h for j.
+      }//edw kleinei h for i.
+    }
     if(it%10000==0){
-      sprintf(filename, "Results%s/Results_POT_LIF_2D_Classic_sigma_%lf_R_%d_time_%lf_.dat",argv[2],sigma,R,t);
+      sprintf(filename, "ResultsOpenMP%s/Results_POT_LIF_2D_Classic_sigma_%lf_R_%d_time_%lf_.dat",argv[2],sigma,R,t);
       file1=fopen(filename,"w");
       for(i=0;i<N;i++){
         for(j=0;j<N;j++){
@@ -130,7 +134,7 @@ int main(int argc, char** argv){
     }
     if (it>minMPVIter){
       if ((it-minMPVIter)%maxMPVIter==0){
-        sprintf(filename, "Results%s/Results_MPV_LIF_2D_Classic_sigma_%lf_R_%d_time_%lf_.dat",argv[2],sigma,R,t);
+        sprintf(filename, "ResultsOpenMP%s/Results_MPV_LIF_2D_Classic_sigma_%lf_R_%d_time_%lf_.dat",argv[2],sigma,R,t);
         file1=fopen(filename,"w");
         for(i=0;i<N;i++){
           for(j=0;j<N;j++){
@@ -143,7 +147,7 @@ int main(int argc, char** argv){
     }
     if (it == 2000000){
       time_t benchEnd = time(NULL);
-      sprintf(filename, "Results%s/execTime.dat",argv[2]);
+      sprintf(filename, "ResultsOpenMP%s/execTime.dat",argv[2]);
       file1=fopen(filename,"w");
       fprintf(file1,"Execution time for 2000 time units: %ld seconds\n",benchEnd-benchBegin);
       fclose(file1);
