@@ -25,8 +25,8 @@ int main(int argc, char** argv){
 
   /*******Parameter Declarations*******/
   int N=100;  //Grid dimension
-  double dt=0.001; //0.001
-  int totalTime=10000;  //Simulation time
+  double dt=0.001; //Time step
+  int totalTime=10000;  //Total simulation time
   int it=0;
   int totalIter=totalTime/dt; //Total iterations
   int R=22; //Square radius
@@ -41,18 +41,18 @@ int main(int argc, char** argv){
   int i,j,k,l;
   int iLeftCorner, jLeftCorner;
 
-  double u[N][N];
-  double unext[N][N];
+  double u[N][N]; //Potential at current iteration
+  double unext[N][N]; //Potential at next iteration
 
-  double sumVar=0.0;  //Potential sum coefficient
+  double sumVar=0.0;  //Sum of neighbouring potential differences
 
-  int currRefracIter[N][N];  //Current iterations already in refractory period
-  int maxMPVIter=30000;
-  int minMPVIter=2000000; //bhma meta to opoio me endiaferei na arxisw na upologizw thn syxnothta twn neurwnwn.
+  int currRefracIter[N][N];  //Number of iterations already in refractory period
+  int maxMPVIter=30000;  //Sampling period (for writing results)
+  int minMPVIter=2000000; //Number of iterations after which Mean Phase Velocity starts being calculated
 
-  double currTime[N][N];
-  double lastTime[N][N];
-  double w[N][N];
+  double currTime[N][N];  //Passed time in current oscillation
+  double lastTime[N][N];  //Finish time of last oscillation
+  double w[N][N]; //Mean Phase Velocity
   double t=0.0;
 
   for (i=0; i<N; i++){
@@ -64,6 +64,8 @@ int main(int argc, char** argv){
     }
   }
 
+
+  /*******Import Initial Conditions*******/
   file1=fopen(argv[1],"r"); //argv[1]
   char line[2048];
   i=0;
@@ -77,7 +79,8 @@ int main(int argc, char** argv){
   }
   fclose(file1);
 
-  time_t benchBegin = time(NULL);
+  time_t benchBegin = time(NULL); //Start timer for benchmarking
+
   /*******Simulation*******/
   while (it<totalIter){
 
@@ -107,10 +110,12 @@ int main(int argc, char** argv){
             }
           }
 
+          /*******Euler Method*******/
           unext[i][j]=u[i][j]+dt*(mi-u[i][j]+sumCoeff*sumVar);
           currTime[i][j]+=dt;
 
-          if(unext[i][j]>=uth){   //Threshold crossed
+          /*******Threshold crossed*******/
+          if(unext[i][j]>=uth){
             unext[i][j]=0.0;
             if (it>=minMPVIter){
               w[i][j]=(w[i][j]*lastTime[i][j]+2*pi)/(lastTime[i][j]+currTime[i][j]+refracTime);
@@ -118,9 +123,12 @@ int main(int argc, char** argv){
             }
             currTime[i][j]=0.0;
           }
-        }//edw kleinei h for j.
-      }//edw kleinei h for i.
-    }
+
+        }
+      }
+    } //POTENTIAL CALCULATION END
+
+    /*******Save results about current potential*******/
     if(it%10000==0){
       sprintf(filename, "ResultsOpenMP%s/Results_POT_LIF_2D_Classic_sigma_%lf_R_%d_time_%lf_.dat",argv[2],sigma,R,t);
       file1=fopen(filename,"w");
@@ -132,6 +140,8 @@ int main(int argc, char** argv){
       }
       fclose(file1);
     }
+
+    /*******Save results about current Mean Phase Velocity*******/
     if (it>minMPVIter){
       if ((it-minMPVIter)%maxMPVIter==0){
         sprintf(filename, "ResultsOpenMP%s/Results_MPV_LIF_2D_Classic_sigma_%lf_R_%d_time_%lf_.dat",argv[2],sigma,R,t);
@@ -145,13 +155,17 @@ int main(int argc, char** argv){
         fclose(file1);
       }
     }
+
+    /*******Save results about execution time of 2000000 iterations*******/
     if (it == 2000000){
-      time_t benchEnd = time(NULL);
+      time_t benchEnd = time(NULL); //Stop timer for benchmarking
       sprintf(filename, "ResultsOpenMP%s/execTime.dat",argv[2]);
       file1=fopen(filename,"w");
       fprintf(file1,"Execution time for 2000 time units: %ld seconds\n",benchEnd-benchBegin);
       fclose(file1);
     }
+
+    /*******Prepare data for next iteration*******/
     for (i=0; i<N; i++){
       for (j=0; j<N; j++){
         u[i][j]=unext[i][j];
@@ -159,7 +173,8 @@ int main(int argc, char** argv){
     }
     t+=dt;
     it++;
-  } //edw kleinei h while.
+    /******ITERATION END*******/
+  }
 
   return(0);
 }
